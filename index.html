@@ -166,7 +166,7 @@
 
     <!-- Script Principal -->
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbySWB9MMfCJW7DDUUo8E5lQsLw6EwcRU-Bki218MBvhQU-621hPisj7XfZGXWfMdPu1-A/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyvnTtckDR6Nvnx0Mb7kjjKrl6EOcAlbFBVcwAab812DImgAJ2_ThB2RudsbHVg2NZO-w/exec";
         
         let rifasData = [];
         let configData = { totalNumeros: 300, precioIndividual: 2000, promociones: [{ cantidad: 3, precio: 5000 }] };
@@ -191,7 +191,7 @@
                 })
                 .catch(err => {
                     console.error(err);
-                    alert("Error al conectar con Google Sheets.\nVerificá que la URL sea correcta y que hayas ejecutado la función setup.");
+                    alert("Error al conectar con Google Sheets.");
                     document.getElementById('loader').classList.add('hidden');
                 });
         }
@@ -241,6 +241,12 @@
         }
 
         function toggleSeleccion(num) {
+            const item = rifasData.find(r => r.numero === num);
+            if (item && item.estado === 'Vendido') {
+                alert("El número " + num + " ya está vendido y no se puede seleccionar.");
+                return;
+            }
+
             if (seleccionados.has(num)) {
                 seleccionados.delete(num);
             } else {
@@ -273,10 +279,17 @@
             document.getElementById('modalNumerosArray').value = JSON.stringify([item.numero]);
             document.getElementById('modalTitulo').innerText = `Número #${item.numero}`;
             document.getElementById('infoPrecioPromo').classList.add('hidden');
+            
             document.getElementById('modalEstado').value = item.estado || 'Disponible';
             document.getElementById('modalComprador').value = item.comprador || '';
             document.getElementById('modalTelefono').value = item.telefono || '';
             document.getElementById('modalNotas').value = item.notas || '';
+
+            if (item.estado === 'Vendido') {
+                document.getElementById('infoPrecioPromo').innerText = "⚠️ Este número ya está vendido. Si guardás, lo vas a modificar.";
+                document.getElementById('infoPrecioPromo').classList.remove('hidden');
+            }
+
             document.getElementById('modalVenta').classList.remove('hidden');
             document.getElementById('modalVenta').classList.add('flex');
         }
@@ -322,7 +335,6 @@
             document.getElementById('loader').classList.remove('hidden');
             cerrarModalVenta();
 
-            // Método clásico y más confiable con Google Apps Script
             const params = new URLSearchParams({
                 action: "updateBatch",
                 numeros: JSON.stringify(nums),
@@ -337,14 +349,27 @@
 
             const url = WEB_APP_URL + "?" + params.toString();
 
-            const img = new Image();
-            img.onload = img.onerror = function() {
-                setTimeout(() => {
-                    limpiarSeleccion();
-                    cargarDatos();
-                }, 2000);
-            };
-            img.src = url;
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.yaVendidos && data.yaVendidos.length > 0) {
+                        alert("Los siguientes números ya fueron vendidos por otra persona:\n\n" + 
+                              data.yaVendidos.join(", ") + 
+                              "\n\nElegí otros números.");
+                    }
+                    
+                    setTimeout(() => {
+                        limpiarSeleccion();
+                        cargarDatos();
+                    }, 800);
+                })
+                .catch(err => {
+                    console.error(err);
+                    setTimeout(() => {
+                        limpiarSeleccion();
+                        cargarDatos();
+                    }, 2000);
+                });
         }
 
         function actualizarEstadisticas() {
@@ -465,11 +490,13 @@
 
             const url = WEB_APP_URL + "?" + params.toString();
 
-            const img = new Image();
-            img.onload = img.onerror = function() {
-                setTimeout(() => cargarDatos(), 2000);
-            };
-            img.src = url;
+            fetch(url)
+                .then(() => {
+                    setTimeout(() => cargarDatos(), 1500);
+                })
+                .catch(() => {
+                    setTimeout(() => cargarDatos(), 1500);
+                });
         }
     </script>
 </body>
