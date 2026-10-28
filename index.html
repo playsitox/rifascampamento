@@ -12,7 +12,10 @@
     <!-- Header -->
     <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h1 class="text-2xl font-bold flex items-center gap-2"><i class="fa-solid fa-ticket"></i> Sorteo de Rifa</h1>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-ticket"></i> Sorteo de Rifa
+                <span id="badgeAdmin" class="hidden ml-2 text-xs bg-amber-400 text-slate-900 px-2 py-0.5 rounded-full font-bold">MODO ADMIN</span>
+            </h1>
             <div class="flex items-center gap-3">
                 <button onclick="cargarDatos()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <i class="fa-solid fa-rotate"></i> Actualizar
@@ -33,10 +36,9 @@
         <button onclick="limpiarSeleccion()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Main Container -->
     <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6 pb-24">
 
-        <!-- Panel de Estadísticas -->
+        <!-- Estadísticas -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                 <p class="text-xs text-slate-500 font-semibold uppercase">Total Números</p>
@@ -56,7 +58,7 @@
             </div>
         </div>
 
-        <!-- Barra de Búsqueda y Filtros -->
+        <!-- Filtros -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="relative w-full md:w-96">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -71,11 +73,8 @@
             </div>
         </div>
 
-        <!-- Grid de Números -->
-        <div id="gridRifas" class="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-15 lg:grid-cols-20 gap-2">
-            <!-- Se llena dinámicamente -->
-        </div>
-
+        <!-- Grid -->
+        <div id="gridRifas" class="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-15 lg:grid-cols-20 gap-2"></div>
     </main>
 
     <!-- Loader -->
@@ -84,7 +83,7 @@
         <p class="font-medium">Sincronizando con Google Sheets...</p>
     </div>
 
-    <!-- Modal Venta / Detalle -->
+    <!-- Modal Venta -->
     <div id="modalVenta" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
@@ -119,22 +118,30 @@
         </div>
     </div>
 
-    <!-- Modal Admin / Configuración -->
+    <!-- Modal Admin -->
     <div id="modalAdmin" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="text-lg font-bold text-slate-800">Panel de Administración</h3>
                 <button onclick="cerrarAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
+
+            <!-- Login -->
             <div id="adminLogin" class="space-y-4">
-                <p class="text-sm text-slate-600">Ingresa la clave de administrador.</p>
+                <p class="text-sm text-slate-600">Ingresá la contraseña de administrador.</p>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
                     <input type="password" id="adminPass" onkeypress="handleAdminKey(event)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="••••••••">
                 </div>
                 <button onclick="verificarAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-lg text-sm font-medium">Ingresar</button>
             </div>
+
+            <!-- Panel Admin -->
             <div id="adminPanel" class="space-y-4 hidden">
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-sm">
+                    Estás en <strong>Modo Administrador</strong>. Ahora podés editar números con clic derecho.
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cantidad Total de Números</label>
                     <input type="number" id="confTotal" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
@@ -143,35 +150,51 @@
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Precio Individual ($)</label>
                     <input type="number" id="confPrecio" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
                 </div>
+
                 <div class="border-t pt-3">
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Configurar Promoción por Combo</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Promoción por Combo</label>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <span class="text-[10px] text-slate-500 uppercase">Cantidad de rifas</span>
+                            <span class="text-[10px] text-slate-500 uppercase">Cantidad</span>
                             <input type="number" id="confPromoCant" class="w-full border border-slate-300 rounded-lg p-2 text-sm" placeholder="Ej. 3">
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-500 uppercase">Precio total del combo</span>
+                            <span class="text-[10px] text-slate-500 uppercase">Precio total</span>
                             <input type="number" id="confPromoPrecio" class="w-full border border-slate-300 rounded-lg p-2 text-sm" placeholder="Ej. 5000">
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-end gap-3 pt-3 border-t">
-                    <button onclick="cerrarAdminModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600">Cerrar</button>
-                    <button onclick="guardarConfiguracion()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">Guardar Config</button>
+
+                <div class="border-t pt-3">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Cambiar Contraseña de Admin</label>
+                    <input type="password" id="confNuevaPass" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Nueva contraseña">
+                </div>
+
+                <div class="flex flex-col gap-2 pt-3 border-t">
+                    <button onclick="guardarConfiguracion()" class="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
+                        Guardar Configuración
+                    </button>
+                    <button onclick="salirModoAdmin()" class="w-full px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">
+                        Salir del Modo Admin
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Script Principal -->
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyvnTtckDR6Nvnx0Mb7kjjKrl6EOcAlbFBVcwAab812DImgAJ2_ThB2RudsbHVg2NZO-w/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwyZEbnkFCAXYYaust1pEQRNbzQJ4StwjTcZrTO_yWvBZfBgqtpuPktcVlSfWvI7lU_FA/exec";
         
         let rifasData = [];
-        let configData = { totalNumeros: 300, precioIndividual: 2000, promociones: [{ cantidad: 3, precio: 5000 }] };
+        let configData = { 
+            totalNumeros: 300, 
+            precioIndividual: 2000, 
+            promociones: [{ cantidad: 3, precio: 5000 }],
+            adminPassword: "admin123"
+        };
         let filtroActual = 'todos';
         let seleccionados = new Set();
+        let modoAdmin = false;
 
         window.onload = function() {
             cargarDatos();
@@ -231,9 +254,15 @@
                 `;
 
                 div.onclick = () => toggleSeleccion(item.numero);
+                
+                // Solo permite clic derecho si está en modo Admin
                 div.oncontextmenu = (e) => {
                     e.preventDefault();
-                    abrirModalVentaIndividual(item);
+                    if (modoAdmin) {
+                        abrirModalVentaIndividual(item);
+                    } else {
+                        alert("Solo el administrador puede editar números ya vendidos.\nIngresá al modo Admin.");
+                    }
                 };
 
                 grid.appendChild(div);
@@ -286,7 +315,7 @@
             document.getElementById('modalNotas').value = item.notas || '';
 
             if (item.estado === 'Vendido') {
-                document.getElementById('infoPrecioPromo').innerText = "⚠️ Este número ya está vendido. Si guardás, lo vas a modificar.";
+                document.getElementById('infoPrecioPromo').innerText = "⚠️ Este número ya está vendido. Estás en modo Admin, podés modificarlo.";
                 document.getElementById('infoPrecioPromo').classList.remove('hidden');
             }
 
@@ -432,6 +461,7 @@
             renderizarGrid();
         }
 
+        // ==================== ADMIN ====================
         function abrirAdminModal() {
             document.getElementById('adminLogin').classList.remove('hidden');
             document.getElementById('adminPanel').classList.add('hidden');
@@ -452,11 +482,19 @@
 
         function verificarAdmin() {
             const pass = document.getElementById('adminPass').value;
-            if (pass === 'admin123') {
+            const passwordCorrecta = configData.adminPassword || "admin123";
+
+            if (pass === passwordCorrecta) {
+                modoAdmin = true;
+                document.getElementById('badgeAdmin').classList.remove('hidden');
                 document.getElementById('adminLogin').classList.add('hidden');
                 document.getElementById('adminPanel').classList.remove('hidden');
+
+                // Cargar valores actuales
                 document.getElementById('confTotal').value = configData.totalNumeros;
                 document.getElementById('confPrecio').value = configData.precioIndividual;
+                document.getElementById('confNuevaPass').value = '';
+
                 if (configData.promociones && configData.promociones.length > 0) {
                     document.getElementById('confPromoCant').value = configData.promociones[0].cantidad;
                     document.getElementById('confPromoPrecio').value = configData.promociones[0].precio;
@@ -466,11 +504,19 @@
             }
         }
 
+        function salirModoAdmin() {
+            modoAdmin = false;
+            document.getElementById('badgeAdmin').classList.add('hidden');
+            cerrarAdminModal();
+            alert("Saliste del modo Administrador.");
+        }
+
         function guardarConfiguracion() {
             const total = document.getElementById('confTotal').value;
             const precio = document.getElementById('confPrecio').value;
             const promoCant = document.getElementById('confPromoCant').value;
             const promoPrecio = document.getElementById('confPromoPrecio').value;
+            const nuevaPass = document.getElementById('confNuevaPass').value.trim();
 
             let promos = [];
             if (promoCant && promoPrecio) {
@@ -488,11 +534,23 @@
                 t: Date.now()
             });
 
+            // Solo enviamos la nueva contraseña si el usuario escribió algo
+            if (nuevaPass) {
+                params.append("adminPassword", nuevaPass);
+            }
+
             const url = WEB_APP_URL + "?" + params.toString();
 
             fetch(url)
                 .then(() => {
-                    setTimeout(() => cargarDatos(), 1500);
+                    setTimeout(() => {
+                        cargarDatos();
+                        if (nuevaPass) {
+                            alert("Configuración guardada.\nLa nueva contraseña ya está activa.");
+                        } else {
+                            alert("Configuración guardada correctamente.");
+                        }
+                    }, 1500);
                 })
                 .catch(() => {
                     setTimeout(() => cargarDatos(), 1500);
