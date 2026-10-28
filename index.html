@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Rifa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold flex items-center gap-2"><i class="fa-solid fa-ticket"></i> Sorteo de Rifa</h1>
+            <div class="flex items-center gap-3">
+                <button onclick="cargarDatos()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-rotate"></i> Actualizar
+                </button>
+                <button onclick="abrirAdminModal()" class="bg-slate-800 hover:bg-slate-900 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Admin / Config
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Barra flotante de selección múltiple -->
+    <div id="barraSeleccion" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl hidden items-center gap-4 z-40 border border-slate-700">
+        <span id="textoSeleccionados" class="text-sm font-semibold">0 números seleccionados</span>
+        <button onclick="abrirModalVentaMultiple()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition flex items-center gap-2">
+            <i class="fa-solid fa-cart-shopping"></i> Vender / Reservar Selección
+        </button>
+        <button onclick="limpiarSeleccion()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6 pb-24">
+
+        <!-- Panel de Estadísticas -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-slate-500 font-semibold uppercase">Total Números</p>
+                <p id="statTotal" class="text-2xl font-bold text-slate-800">-</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-emerald-600 font-semibold uppercase">Disponibles</p>
+                <p id="statDisponibles" class="text-2xl font-bold text-emerald-600">-</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-rose-600 font-semibold uppercase">Vendidos</p>
+                <p id="statVendidos" class="text-2xl font-bold text-rose-600">-</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs text-indigo-600 font-semibold uppercase">Recaudación Estimada</p>
+                <p id="statRecaudacion" class="text-2xl font-bold text-indigo-600">$0</p>
+            </div>
+        </div>
+
+        <!-- Barra de Búsqueda y Filtros -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="relative w-full md:w-96">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                    <i class="fa-solid fa-search"></i>
+                </span>
+                <input type="text" id="buscador" oninput="filtrarRifas()" placeholder="Buscar por número o nombre..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button onclick="filtrarEstado('todos')" id="btnFiltroTodos" class="flex-1 md:flex-none px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg transition">Todos</button>
+                <button onclick="filtrarEstado('Disponible')" id="btnFiltroLibres" class="flex-1 md:flex-none px-4 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg transition">Libres</button>
+                <button onclick="filtrarEstado('Vendido')" id="btnFiltroVendidos" class="flex-1 md:flex-none px-4 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg transition">Vendidos</button>
+            </div>
+        </div>
+
+        <!-- Grid de Números -->
+        <div id="gridRifas" class="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-15 lg:grid-cols-20 gap-2">
+            <!-- Se llena dinámicamente -->
+        </div>
+
+    </main>
+
+    <!-- Loader -->
+    <div id="loader" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex flex-col items-center justify-center z-50 text-white">
+        <i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i>
+        <p class="font-medium">Sincronizando con Google Sheets...</p>
+    </div>
+
+    <!-- Modal Venta / Detalle -->
+    <div id="modalVenta" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="modalTitulo" class="text-lg font-bold text-slate-800">Gestionar Número</h3>
+                <button onclick="cerrarModalVenta()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <input type="hidden" id="modalNumerosArray">
+            <div id="infoPrecioPromo" class="bg-indigo-50 text-indigo-700 p-3 rounded-xl text-sm font-semibold hidden"></div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Estado</label>
+                <select id="modalEstado" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <option value="Disponible">Disponible</option>
+                    <option value="Vendido">Vendido</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nombre del Comprador</label>
+                <input type="text" id="modalComprador" placeholder="Ej. Juan Pérez" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Teléfono</label>
+                <input type="text" id="modalTelefono" placeholder="Ej. 1123456789" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Notas / Observaciones</label>
+                <input type="text" id="modalNotas" placeholder="Ej. Pagado por MercadoPago" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex justify-end gap-3 pt-3 border-t">
+                <button onclick="cerrarModalVenta()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button onclick="guardarVenta()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Admin / Configuración -->
+    <div id="modalAdmin" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Panel de Administración</h3>
+                <button onclick="cerrarAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="adminLogin" class="space-y-4">
+                <p class="text-sm text-slate-600">Ingresa la clave de administrador.</p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="adminPass" onkeypress="handleAdminKey(event)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="••••••••">
+                </div>
+                <button onclick="verificarAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-lg text-sm font-medium">Ingresar</button>
+            </div>
+            <div id="adminPanel" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cantidad Total de Números</label>
+                    <input type="number" id="confTotal" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Precio Individual ($)</label>
+                    <input type="number" id="confPrecio" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <div class="border-t pt-3">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Configurar Promoción por Combo</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[10px] text-slate-500 uppercase">Cantidad de rifas</span>
+                            <input type="number" id="confPromoCant" class="w-full border border-slate-300 rounded-lg p-2 text-sm" placeholder="Ej. 3">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-500 uppercase">Precio total del combo</span>
+                            <input type="number" id="confPromoPrecio" class="w-full border border-slate-300 rounded-lg p-2 text-sm" placeholder="Ej. 5000">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t">
+                    <button onclick="cerrarAdminModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600">Cerrar</button>
+                    <button onclick="guardarConfiguracion()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">Guardar Config</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwBxE8QvUztkak1ebxluSmLZLyGKoq0ZqLxeMvK1t3HFXMNwh6dSiI6kCVdOxH4HXW3w/exec";
+        
+        let rifasData = [];
+        let configData = { totalNumeros: 300, precioIndividual: 2000, promociones: [{ cantidad: 3, precio: 5000 }] };
+        let filtroActual = 'todos';
+        let seleccionados = new Set();
+
+        window.onload = function() {
+            cargarDatos();
+        };
+
+        function cargarDatos() {
+            document.getElementById('loader').classList.remove('hidden');
+            fetch(WEB_APP_URL + "?action=getData")
+                .then(res => res.json())
+                .then(data => {
+                    rifasData = data.rifas || [];
+                    if(data.config) configData = data.config;
+                    
+                    if(rifasData.length === 0) {
+                        for(let i=1; i<=configData.totalNumeros; i++) {
+                            rifasData.push({numero: i, estado: 'Disponible', comprador: '', telefono: '', fecha: '', notas: ''});
+                        }
+                    }
+                    
+                    renderizarGrid();
+                    actualizarEstadisticas();
+                    document.getElementById('loader').classList.add('hidden');
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error al conectar con Google Sheets.");
+                    document.getElementById('loader').classList.add('hidden');
+                });
+        }
+
+        function renderizarGrid() {
+            const grid = document.getElementById('gridRifas');
+            grid.innerHTML = '';
+            const busqueda = document.getElementById('buscador').value.toLowerCase();
+
+            rifasData.forEach(item => {
+                if(filtroActual === 'Disponible' && item.estado !== 'Disponible') return;
+                if(filtroActual === 'Vendido' && item.estado !== 'Vendido') return;
+
+                if(busqueda && !item.numero.toString().includes(busqueda) && !(item.comprador && item.comprador.toLowerCase().includes(busqueda))) {
+                    return;
+                }
+
+                const vendido = item.estado === 'Vendido';
+                const seleccionado = seleccionados.has(item.numero);
+
+                const div = document.createElement('div');
+                div.className = `aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer font-bold text-sm transition transform hover:scale-105 shadow-sm border relative ${
+                    seleccionado ? 'ring-4 ring-indigo-500 bg-indigo-50 text-indigo-900 border-indigo-400' :
+                    vendido ? 'bg-rose-500 text-white border-rose-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                }`;
+
+                div.innerHTML = `
+                    <span class="text-base">${item.numero}</span>
+                    <span class="text-[9px] font-normal truncate max-w-[90%] px-1 opacity-90">${item.comprador || (vendido ? 'Vendido' : 'Libre')}</span>
+                    ${seleccionado ? '<span class="absolute top-1 right-1 w-3 h-3 bg-indigo-600 rounded-full"></span>' : ''}
+                `;
+
+                div.onclick = (e) => {
+                    toggleSeleccion(item.numero, div);
+                };
+
+                div.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    abrirModalVentaIndividual(item);
+                };
+
+                grid.appendChild(div);
+            });
+        }
+
+        function toggleSeleccion(num, element) {
+            if(seleccionados.has(num)) {
+                seleccionados.delete(num);
+            } else {
+                seleccionados.add(num);
+            }
+            actualizarBarraSeleccion();
+            renderizarGrid();
+        }
+
+        function limpiarSeleccion() {
+            seleccionados.clear();
+            actualizarBarraSeleccion();
+            renderizarGrid();
+        }
+
+        function actualizarBarraSeleccion() {
+            const barra = document.getElementById('barraSeleccion');
+            const texto = document.getElementById('textoSeleccionados');
+            if(seleccionados.size > 0) {
+                texto.innerText = `${seleccionados.size} número${seleccionados.size > 1 ? 's' : ''} seleccionado${seleccionados.size > 1 ? 's' : ''}`;
+                barra.classList.remove('hidden');
+                barra.classList.add('flex');
+            } else {
+                barra.classList.add('hidden');
+                barra.classList.remove('flex');
+            }
+        }
+
+        function abrirModalVentaIndividual(item) {
+            document.getElementById('modalNumerosArray').value = JSON.stringify([item.numero]);
+            document.getElementById('modalTitulo').innerText = `Número #${item.numero}`;
+            document.getElementById('infoPrecioPromo').classList.add('hidden');
+            document.getElementById('modalEstado').value = item.estado || 'Disponible';
+            document.getElementById('modalComprador').value = item.comprador || '';
+            document.getElementById('modalTelefono').value = item.telefono || '';
+            document.getElementById('modalNotas').value = item.notas || '';
+            document.getElementById('modalVenta').classList.remove('hidden');
+            document.getElementById('modalVenta').classList.add('flex');
+        }
+
+        function abrirModalVentaMultiple() {
+            const arr = Array.from(seleccionados);
+            if(arr.length === 0) return;
+
+            document.getElementById('modalNumerosArray').value = JSON.stringify(arr);
+            document.getElementById('modalTitulo').innerText = `Vender ${arr.length} números seleccionados`;
+            document.getElementById('modalEstado').value = 'Vendido';
+            document.getElementById('modalComprador').value = '';
+            document.getElementById('modalTelefono').value = '';
+            document.getElementById('modalNotas').value = '';
+
+            let precioTotal = calcularRecaudacionTotal(arr.length);
+            const infoDiv = document.getElementById('infoPrecioPromo');
+            infoDiv.innerText = `Precio total calculado con promos: $${precioTotal.toLocaleString('es-AR')} (${arr.length} números)`;
+            infoDiv.classList.remove('hidden');
+
+            document.getElementById('modalVenta').classList.remove('hidden');
+            document.getElementById('modalVenta').classList.add('flex');
+        }
+
+        function cerrarModalVenta() {
+            document.getElementById('modalVenta').classList.add('hidden');
+            document.getElementById('modalVenta').classList.remove('flex');
+        }
+
+        function guardarVenta() {
+            const numerosJson = document.getElementById('modalNumerosArray').value;
+            const nums = JSON.parse(numerosJson);
+            const estado = document.getElementById('modalEstado').value;
+            const comprador = document.getElementById('modalComprador').value;
+            const telefono = document.getElementById('modalTelefono').value;
+            const notas = document.getElementById('modalNotas').value;
+            const fecha = new Date().toLocaleDateString();
+
+            let precioCobrado = 0;
+            if(estado === 'Vendido') {
+                precioCobrado = calcularRecaudacionTotal(nums.length);
+            }
+
+            document.getElementById('loader').classList.remove('hidden');
+            cerrarModalVenta();
+
+            const url = `${WEB_APP_URL}?action=updateBatch&numeros=${encodeURIComponent(numerosJson)}&estado=${encodeURIComponent(estado)}&comprador=${encodeURIComponent(comprador)}&telefono=${encodeURIComponent(telefono)}&fecha=${encodeURIComponent(fecha)}&notas=${encodeURIComponent(notas)}&precioCobrado=${precioCobrado}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(res => {
+                    document.getElementById('loader').classList.add('hidden');
+                    if(res.status === "error") {
+                        alert(res.message);
+                        cargarDatos();
+                    } else {
+                        limpiarSeleccion();
+                        cargarDatos();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error al guardar cambios.");
+                    document.getElementById('loader').classList.add('hidden');
+                });
+        }
+
+        function actualizarEstadisticas() {
+            const total = configData.totalNumeros || rifasData.length;
+            const vendidos = rifasData.filter(i => i.estado === 'Vendido').length;
+            const disponibles = total - vendidos;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statVendidos').innerText = vendidos;
+            document.getElementById('statDisponibles').innerText = disponibles;
+
+            let recaudacion = 0;
+            rifasData.filter(i => i.estado === 'Vendido').forEach(item => {
+                recaudacion += Number(item.precioCobrado || 0);
+            });
+            if(recaudacion === 0) {
+                recaudacion = calcularRecaudacionTotal(vendidos);
+            }
+
+            document.getElementById('statRecaudacion').innerText = '$' + recaudacion.toLocaleString('es-AR');
+        }
+
+        function calcularRecaudacionTotal(cantVendidos) {
+            let precioInd = configData.precioIndividual || 2000;
+            let promos = configData.promociones || [{ cantidad: 3, precio: 5000 }];
+            
+            promos.sort((a,b) => b.cantidad - a.cantidad);
+
+            let restante = cantVendidos;
+            let total = 0;
+
+            promos.forEach(p => {
+                let paquetes = Math.floor(restante / p.cantidad);
+                total += paquetes * p.precio;
+                restante %= p.cantidad;
+            });
+
+            total += restante * precioInd;
+            return total;
+        }
+
+        function filtrarEstado(estado) {
+            filtroActual = estado;
+            ['todos', 'Libres', 'Vendidos'].forEach(e => {
+                const btn = document.getElementById('btnFiltro' + e);
+                if(e.toLowerCase() === estado.toLowerCase() || (estado==='todos' && e==='todos')) {
+                    btn.className = "flex-1 md:flex-none px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg transition";
+                } else {
+                    btn.className = "flex-1 md:flex-none px-4 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg transition";
+                }
+            });
+            renderizarGrid();
+        }
+
+        function filtrarRifas() {
+            renderizarGrid();
+        }
+
+        function abrirAdminModal() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('adminPass').value = '';
+            document.getElementById('modalAdmin').classList.remove('hidden');
+            document.getElementById('modalAdmin').classList.add('flex');
+            setTimeout(() => document.getElementById('adminPass').focus(), 100);
+        }
+
+        function cerrarAdminModal() {
+            document.getElementById('modalAdmin').classList.add('hidden');
+            document.getElementById('modalAdmin').classList.remove('flex');
+        }
+
+        function handleAdminKey(e) {
+            if(e.key === 'Enter') {
+                verificarAdmin();
+            }
+        }
+
+        function verificarAdmin() {
+            const pass = document.getElementById('adminPass').value;
+            if(pass === 'admin123') {
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                document.getElementById('confTotal').value = configData.totalNumeros;
+                document.getElementById('confPrecio').value = configData.precioIndividual;
+                if(configData.promociones && configData.promociones.length > 0) {
+                    document.getElementById('confPromoCant').value = configData.promociones[0].cantidad;
+                    document.getElementById('confPromoPrecio').value = configData.promociones[0].precio;
+                }
+            } else {
+                alert("Contraseña incorrecta.");
+            }
+        }
+
+        function guardarConfiguracion() {
+            const total = document.getElementById('confTotal').value;
+            const precio = document.getElementById('confPrecio').value;
+            const promoCant = document.getElementById('confPromoCant').value;
+            const promoPrecio = document.getElementById('confPromoPrecio').value;
+
+            let promos = [];
+            if(promoCant && promoPrecio) {
+                promos.push({ cantidad: Number(promoCant), precio: Number(promoPrecio) });
+            }
+
+            document.getElementById('loader').classList.remove('hidden');
+            cerrarAdminModal();
+
+            const url = `${WEB_APP_URL}?action=saveConfig&totalNumeros=${total}&precioIndividual=${precio}&promocionesJson=${encodeURIComponent(JSON.stringify(promos))}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(res => {
+                    cargarDatos();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error al guardar configuración.");
+                    document.getElementById('loader').classList.add('hidden');
+                });
+        }
+    </script>
+</body>
+</html>
